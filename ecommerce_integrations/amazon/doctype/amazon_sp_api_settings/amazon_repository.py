@@ -365,7 +365,7 @@ class AmazonRepository:
 				make_address = frappe.new_doc("Address")
 				make_address.address_line1 = shipping_address.get("AddressLine1", "Not Provided")
 				make_address.city = shipping_address.get("City", "Not Provided")
-				make_address.state = get_verify_postal_code(
+				make_address.state = get_state_name_from_pincode(
 					shipping_address.get("CountryCode", ""),
 					shipping_address.get("PostalCode"),
 					shipping_address.get("StateOrRegion").title(),
@@ -514,7 +514,7 @@ def get_orders(amz_setting_name, created_after) -> list:
 	return ar.get_orders(created_after)
 
 
-def get_verify_postal_code(country_code, postal_code, state=" "):
+def get_state_name_from_pincode(country_code, postal_code, state=None):
 	def get_first_three_digits(value):
 		if isinstance(value, str):
 			if len(value.strip()) == 6 and value.strip().isdigit():
@@ -536,13 +536,13 @@ def get_verify_postal_code(country_code, postal_code, state=" "):
 						lower_range, upper_range = c_range
 						if lower_range <= first_three_digits <= upper_range:
 							state_name = _state
-							if state[0].lower() == _state[0].lower():
+							if state and state[0].lower() == _state[0].lower():
 								return _state
 				else:
 					lower_range, upper_range = _range
 					if lower_range <= first_three_digits <= upper_range:
 						state_name = _state
-						if state[0].lower() == _state[0].lower():
+						if state and state[0].lower() == _state[0].lower():
 							return _state
 			if state_name:
 				return state_name
