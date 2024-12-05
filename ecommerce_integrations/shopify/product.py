@@ -60,7 +60,6 @@ class ShopifyProduct:
 			shopify_product = Product.find(self.product_id)
 			product_dict = shopify_product.to_dict()
 			product_dict = self._update_hsn_sac_code(product_dict)
-			self._get_item_group(product_dict.get("product_type"))
 			self._make_item(product_dict)
 
 	def _make_item(self, product_dict):
@@ -197,15 +196,11 @@ class ShopifyProduct:
 			for variant in product_dict.get("variants"):
 				if variant.get("inventory_item_id"):
 					inventory_item = shopify.InventoryItem.find(variant.get("inventory_item_id"))
-					if inventory_item.harmonized_system_code:
+					if hasattr(inventory_item, "harmonized_system_code"):
 						product_dict["gst_hsn_code"] = inventory_item.harmonized_system_code
 						break
 		except Exception:
 			frappe.log_error(title="_update_hsn_sac_code", message=frappe.get_traceback())
-		if not (product_dict.get("gst_hsn_code")) and self.setting.default_item_group:
-			product_dict["gst_hsn_code"] = frappe.db.get_value(
-				"Item Group", self.setting.default_item_group, "gst_hsn_code"
-			)
 		return product_dict
 
 	def _get_attribute_value(self, variant_attr_val, attribute):
