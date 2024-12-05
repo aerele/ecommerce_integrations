@@ -1,6 +1,7 @@
 from typing import Optional
 
 import frappe
+import shopify
 from frappe import _, msgprint
 from frappe.utils import cint, cstr
 from frappe.utils.nestedset import get_root_of
@@ -58,6 +59,8 @@ class ShopifyProduct:
 		if not self.is_synced():
 			shopify_product = Product.find(self.product_id)
 			product_dict = shopify_product.to_dict()
+			product_dict = self._update_hsn_sac_code(product_dict)
+			self._get_item_group(product_dict.get("product_type"))
 			self._make_item(product_dict)
 
 	def _make_item(self, product_dict):
@@ -137,6 +140,7 @@ class ShopifyProduct:
 			"weight_uom": WEIGHT_TO_ERPNEXT_UOM_MAP[product_dict.get("weight_unit")],
 			"weight_per_unit": product_dict.get("weight"),
 			"default_supplier": self._get_supplier(product_dict),
+			"gst_hsn_code": product_dict.get("gst_hsn_code"),
 		}
 
 		integration_item_code = product_dict["id"]  # shopify product_id
@@ -174,6 +178,7 @@ class ShopifyProduct:
 					"item_price": variant.get("price"),
 					"weight_unit": variant.get("weight_unit"),
 					"weight": variant.get("weight"),
+					"gst_hsn_code": product_dict.get("gst_hsn_code"),
 				}
 
 				for i, variant_attr in enumerate(SHOPIFY_VARIANTS_ATTR_LIST):
@@ -186,6 +191,22 @@ class ShopifyProduct:
 							}
 						)
 				self._create_item(shopify_item_variant, warehouse, 0, attributes, template_item.name)
+
+	def _update_hsn_sac_code(self, product_dict):
+		try:
+			for variant in product_dict.get("variants"):
+				if variant.get("inventory_item_id"):
+					inventory_item = shopify.InventoryItem.find(variant.get("inventory_item_id"))
+					if inventory_item.harmonized_system_code:
+						product_dict["gst_hsn_code"] = inventory_item.harmonized_system_code
+						break
+		except Exception:
+			frappe.log_error(title="_update_hsn_sac_code", message=frappe.get_traceback())
+		if not (product_dict.get("gst_hsn_code")) and self.setting.default_item_group:
+			product_dict["gst_hsn_code"] = frappe.db.get_value(
+				"Item Group", self.setting.default_item_group, "gst_hsn_code"
+			)
+		return product_dict
 
 	def _get_attribute_value(self, variant_attr_val, attribute):
 		attribute_value = frappe.db.sql(
