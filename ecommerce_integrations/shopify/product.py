@@ -3,6 +3,7 @@ from typing import Optional
 import frappe
 import shopify
 from frappe import _, msgprint
+from frappe.query_builder import DocType
 from frappe.utils import cint, cstr
 from frappe.utils.nestedset import get_root_of
 from shopify.resources import Product, Variant
@@ -230,11 +231,12 @@ class ShopifyProduct:
 		return product_dict
 
 	def _get_attribute_value(self, variant_attr_val, attribute):
-		attribute_value = frappe.db.sql(
-			"""select attribute_value from `tabItem Attribute Value`
-			where parent = %s and (abbr = %s or attribute_value = %s)""",
-			(attribute["attribute"], variant_attr_val, variant_attr_val),
-			as_list=1,
+		attribute_value = frappe.db.get_all(
+			"Item Attribute Value",
+			filters={"parent": attribute["attribute"]},
+			or_filters={"abbr": variant_attr_val, "attribute_value": variant_attr_val},
+			fields=["attribute_value"],
+			as_list=True,
 		)
 		return attribute_value[0][0] if len(attribute_value) > 0 else cint(variant_attr_val)
 
@@ -264,14 +266,14 @@ class ShopifyProduct:
 			if not (frappe.db.get_value("Item Group", product_type, "gst_hsn_code")) and hsnsac_code:
 				frappe.db.set_value("Item Group", product_type, "gst_hsn_code", hsnsac_code)
 		except Exception:
-			frappe.log_error(title="_update_hsn_code_in_item_group", message=frappe.get_traceback())
+			pass
 
 	def _update_in_item_group_mapping(self, sync_product_group, product_type, hsnsac_code):
 		has_value_flag = False
 		for row in self.setting.shopify_item_group_hsn_mapping:
 			if row.get("item_group") == product_type:
 				if hsnsac_code and row.get("hsnsac_code") != hsnsac_code:
-					row["hsnsac_code"] = hsnsac_code
+					row.hsnsac_code = hsnsac_code
 				has_value_flag = True
 				break
 		if not has_value_flag:
@@ -290,13 +292,16 @@ class ShopifyProduct:
 
 	def _get_supplier(self, product_dict):
 		if product_dict.get("vendor"):
-			supplier = frappe.db.sql(
-				f"""select name from tabSupplier
-				where name = %s or {SUPPLIER_ID_FIELD} = %s """,
-				(product_dict.get("vendor"), product_dict.get("vendor").lower()),
-				as_list=1,
-			)
+			Supplier = DocType("Supplier")
 
+			supplier = (
+				frappe.qb.from_(Supplier)
+				.select(Supplier.name)
+				.where(
+					(Supplier.name == product_dict.get("vendor"))
+					| (Supplier[SUPPLIER_ID_FIELD] == product_dict.get("vendor").lower())
+				)
+			).run(as_list=True)
 			if supplier:
 				return product_dict.get("vendor")
 			supplier = frappe.get_doc(
