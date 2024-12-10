@@ -30,7 +30,7 @@
  "modified": "2024-12-06 16:01:12.105446",
  "modified_by": "Administrator",
  "module": "shopify",
- "name": "Item Group HSN SAC Code Mapping",
+ "name": "Shopify Item Group HSN Mapping",
  "owner": "Administrator",
  "permissions": [],
  "sort_field": "creation",

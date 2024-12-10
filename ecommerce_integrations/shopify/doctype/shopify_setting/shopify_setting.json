@@ -52,7 +52,7 @@
   "inventory_sync_frequency",
   "fetch_shopify_locations",
   "shopify_warehouse_mapping",
-  "item_group_hsn_sac_code_mapping",
+  "shopify_item_group_hsn_mapping",
   "sync_old_orders_section",
   "sync_old_orders",
   "column_break_45",
@@ -390,16 +390,16 @@
    "options": "Account"
   },
   {
-   "fieldname": "item_group_hsn_sac_code_mapping",
+   "fieldname": "shopify_item_group_hsn_mapping",
    "fieldtype": "Table",
-   "label": "Item Group HSN SAC Code Mapping",
-   "options": "Item Group HSN SAC Code Mapping"
+   "label": "Shopify Item Group HSN Mapping",
+   "options": "Shopify Item Group HSN Mapping"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-12-06 16:06:02.733525",
+ "modified": "2024-12-10 16:31:44.145714",
  "modified_by": "Administrator",
  "module": "shopify",
  "name": "Shopify Setting",

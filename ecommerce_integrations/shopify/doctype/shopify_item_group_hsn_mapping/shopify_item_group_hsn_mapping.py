@@ -5,5 +5,5 @@
 from frappe.model.document import Document
 
 
-class ItemGroupHSNSACCodeMapping(Document):
+class ShopifyItemGroupHSNMapping(Document):
 	pass

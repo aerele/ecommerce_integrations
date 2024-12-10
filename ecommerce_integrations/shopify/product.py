@@ -164,9 +164,9 @@ class ShopifyProduct:
 		):
 			ecommerce_item.create_ecommerce_item(
 				MODULE_NAME,
-				integration_item_code,
+				str(integration_item_code),
 				item_dict,
-				variant_id=variant_id,
+				variant_id=str(variant_id),
 				sku=sku,
 				variant_of=variant_of,
 				has_variants=has_variant,
@@ -216,7 +216,7 @@ class ShopifyProduct:
 			frappe.log_error(title="_update_hsn_sac_code", message=frappe.get_traceback())
 		if not (product_dict.get("gst_hsn_code")):
 			hsnsac_code = frappe.db.get_value(
-				"Item Group HSN SAC Code Mapping",
+				"Shopify Item Group HSN Mapping",
 				{
 					"parent": SETTING_DOCTYPE,
 					"item_group": product_dict.get("product_type"),
@@ -256,7 +256,7 @@ class ShopifyProduct:
 				"gst_hsn_code": hsnsac_code,
 			}
 		).insert()
-		self._sync_item_group_hsn_sac_code(sync_product_group, item_group, hsnsac_code)
+		self._sync_item_group_hsn_sac_code(sync_product_group, product_type, hsnsac_code)
 		return item_group.name
 
 	def _update_hsn_code_in_item_group(self, product_type, hsnsac_code):
@@ -268,7 +268,7 @@ class ShopifyProduct:
 
 	def _update_in_item_group_mapping(self, sync_product_group, product_type, hsnsac_code):
 		has_value_flag = False
-		for row in self.setting.item_group_hsn_sac_code_mapping:
+		for row in self.setting.shopify_item_group_hsn_mapping:
 			if row.get("item_group") == product_type:
 				if hsnsac_code and row.get("hsnsac_code") != hsnsac_code:
 					row["hsnsac_code"] = hsnsac_code
@@ -281,8 +281,8 @@ class ShopifyProduct:
 		if sync_product_group:
 			if is_new:
 				self.setting.append(
-					"item_group_hsn_sac_code_mapping",
-					{"item_group": item_group.name, "hsnsac_code": hsnsac_code},
+					"shopify_item_group_hsn_mapping",
+					{"item_group": item_group, "hsnsac_code": hsnsac_code},
 				)
 			else:
 				self._update_hsn_code_in_item_group(item_group, hsnsac_code)
