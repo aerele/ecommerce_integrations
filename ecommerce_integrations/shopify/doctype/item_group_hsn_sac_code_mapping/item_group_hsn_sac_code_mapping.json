@@ -1,0 +1,39 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2024-12-06 14:05:51.822550",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "item_group",
+  "hsnsac_code"
+ ],
+ "fields": [
+  {
+   "fieldname": "item_group",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": " Item Group",
+   "options": "Item Group"
+  },
+  {
+   "fieldname": "hsnsac_code",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "HSN/SAC Code"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2024-12-06 16:01:12.105446",
+ "modified_by": "Administrator",
+ "module": "shopify",
+ "name": "Item Group HSN SAC Code Mapping",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}
