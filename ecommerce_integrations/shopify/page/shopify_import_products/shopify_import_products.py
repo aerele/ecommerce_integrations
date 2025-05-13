@@ -155,7 +155,7 @@ def queue_sync_all_product_groups(*args, **kwargs):
 				continue
 
 		if collection.has_next_page():
-			frappe.db.commit()  # prevents too many write request error
+			frappe.db.commit()  # nosemgrep
 			collection = _fetch_products_from_shopify(from_=collection.next_page_url)
 		else:
 			_sync = False
