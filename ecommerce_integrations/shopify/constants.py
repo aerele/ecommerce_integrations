@@ -6,14 +6,15 @@ MODULE_NAME = "shopify"
 SETTING_DOCTYPE = "Shopify Setting"
 OLD_SETTINGS_DOCTYPE = "Shopify Settings"
 
-API_VERSION = "2024-01"
+API_VERSION = "2025-04"
 
 WEBHOOK_EVENTS = [
-	"orders/create",
-	"orders/paid",
-	"orders/fulfilled",
-	"orders/cancelled",
-	"orders/partially_fulfilled",
+	"ORDERS_CANCELLED",
+	"ORDERS_CREATE",
+	"ORDERS_FULFILLED",
+	"ORDERS_PAID",
+	"ORDERS_PARTIALLY_FULFILLED",
+	"PRODUCTS_CREATE",
 ]
 
 EVENT_MAPPER = {
@@ -22,9 +23,8 @@ EVENT_MAPPER = {
 	"orders/fulfilled": "ecommerce_integrations.shopify.fulfillment.prepare_delivery_note",
 	"orders/cancelled": "ecommerce_integrations.shopify.order.cancel_order",
 	"orders/partially_fulfilled": "ecommerce_integrations.shopify.fulfillment.prepare_delivery_note",
+	"products/create": "ecommerce_integrations.shopify.product.create_item",
 }
-
-SHOPIFY_VARIANTS_ATTR_LIST = ["option1", "option2", "option3"]
 
 # custom fields
 
@@ -39,4 +39,9 @@ ORDER_ITEM_DISCOUNT_FIELD = "shopify_item_discount"
 ITEM_SELLING_RATE_FIELD = "shopify_selling_rate"
 
 # ERPNext already defines the default UOMs from Shopify but names are different
-WEIGHT_TO_ERPNEXT_UOM_MAP = {"kg": "Kg", "g": "Gram", "oz": "Ounce", "lb": "Pound"}
+WEIGHT_TO_ERPNEXT_UOM_MAP = {
+	"KILOGRAMS": "Kg",
+	"GRAMS": "Gram",
+	"POUNDS": "Lb",
+	"OUNCES": "Oz",
+}
