@@ -36,7 +36,6 @@ def sync_sales_order(payload, request_id=None):
 	order = payload
 	frappe.set_user("Administrator")
 	frappe.flags.request_id = request_id
-	print(f"Syncing Shopify Order payload: {order}", payload)
 
 	if frappe.db.get_value("Sales Order", filters={ORDER_ID_FIELD: cstr(order["id"])}):
 		create_shopify_log(status="Invalid", message="Sales order already exists, not synced")
@@ -49,13 +48,10 @@ def sync_sales_order(payload, request_id=None):
 		if customer_id:
 			customer = ShopifyCustomer(customer_id=customer_id)
 			if not customer.is_synced():
-				print(f"Syncing customer{order}", order.get("customer"))
 				customer.sync_customer(customer=shopify_customer)
 			else:
 				customer.update_existing_addresses(shopify_customer)
-		print("Items if not exsit to create items")
 		create_items_if_not_exist(order)
-		print("Items created if not exist")
 
 		setting = frappe.get_doc(SETTING_DOCTYPE)
 
@@ -140,7 +136,6 @@ def create_sales_order(shopify_order, setting, company=None):
 
 	else:
 		so = frappe.get_doc("Sales Order", so)
-	print(f"Sales Order {so.name} created for Shopify Order {shopify_order.get('id')}")
 
 	return so
 
@@ -179,7 +174,6 @@ def get_order_items(order_items, setting, delivery_date, taxes_inclusive):
 			)
 		else:
 			items = []
-		print(f"Item code: {item_code} Rate: {_get_item_price(shopify_item, taxes_inclusive)}")
 
 	return items
 
@@ -530,23 +524,11 @@ def sync_old_orders():
 
 
 def _fetch_old_orders(from_time, to_time, limit=50):
-	print("Fetching old orders from Shopify...")
+	frappe.set_user("Administrator")
 	frappe.logger().info("Fetching old orders from Shopify...")
 
 	from_time = get_datetime(from_time).astimezone(pytz.UTC).isoformat()
 	to_time = get_datetime(to_time).astimezone(pytz.UTC).isoformat()
-
-	countquery = """
-    query GetOrdersCount($query: String!) {
-        ordersCount(query: $query) {
-            count
-            precision
-        }
-    }
-    """
-	variables = {"query": ""}
-	countresponse = json.loads(GraphQL().execute(countquery, variables))
-	print(f"Order Count: {countresponse}")
 
 	query = """
     query GetOrdersByDateRange($query: String!, $limit: Int!, $cursor: String) {
@@ -771,14 +753,11 @@ def _fetch_old_orders(from_time, to_time, limit=50):
 
 	while has_next_page:
 		frappe.logger().info(f"Querying Shopify with cursor: {cursor}")
-		print(f"Querying Shopify with cursor: {cursor}, {limit}")
 		variables = {"query": search_query, "limit": limit, "cursor": cursor}
 		response = json.loads(GraphQL().execute(query, variables))
-		print("GraphQL response:", json.dumps(response, indent=2))
 
 		if not response:
 			frappe.logger().error("Empty response from Shopify GraphQL API.")
-			print("Empty response from Shopify GraphQL API.")
 			break
 
 		if "errors" in response:
@@ -858,8 +837,6 @@ def _fetch_old_orders(from_time, to_time, limit=50):
 				if not li or not isinstance(li, dict):
 					continue
 
-				print("Line Item Node:", li)
-
 				# product and variant can be null from Shopify
 				product_obj = li.get("product") or {}
 				variant_obj = li.get("variant") or {}
@@ -906,4 +883,3 @@ def _fetch_old_orders(from_time, to_time, limit=50):
 		cursor = page_info.get("endCursor")
 
 	frappe.logger().info(f"Finished fetching {total_orders} orders.")
-	print(f"Finished fetching {total_orders} orders.")

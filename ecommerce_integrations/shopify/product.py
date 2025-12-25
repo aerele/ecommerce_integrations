@@ -110,7 +110,6 @@ class ShopifyProduct:
 							"numeric_values": item_attr.get("numeric_values"),
 						}
 					)
-		print(attribute)
 		return attribute
 
 	def _set_new_attribute_values(self, item_attr, values):
@@ -308,7 +307,6 @@ class ShopifyProduct:
 		).run(as_list=True)
 
 		if attribute_value:
-			print("Attribute Value ", str(attribute_value[0][0]))
 			return str(attribute_value[0][0])
 		else:
 			# Create missing attribute value in ERPNext
@@ -521,8 +519,6 @@ class ShopifyProduct:
 				}
 			)
 
-		print("Product normalized", normalized)
-
 		return normalized
 
 
@@ -556,9 +552,7 @@ def _match_sku_and_link_item(item_dict, product_id, variant_id, variant_of=None,
 	Returns true if matched and linked.
 	"""
 	sku = item_dict.get("sku")
-	print("Inside _match_sku")
 	if not sku or variant_of or has_variant:
-		print("It has varaint no creation")
 		return False
 
 	item_name = frappe.db.get_value("Item", {"item_code": sku})
@@ -575,11 +569,9 @@ def _match_sku_and_link_item(item_dict, product_id, variant_id, variant_of=None,
 					"sku": sku,
 				}
 			)
-			print("Item Creation ")
 			ecommerce_item.insert()
 			return True
-		except Exception as e:
-			print("Exception occurs", e)
+		except Exception:
 			return False
 
 
@@ -590,14 +582,9 @@ def create_items_if_not_exist(order):
 		variant_id = item.get("variant_id")
 		sku = item.get("sku")
 		product = ShopifyProduct(product_id, variant_id=variant_id, sku=sku)
-		print("inside create_items_if_not_exist in items {prdocuct}", product)
 
 		if not product.is_synced():
 			product.sync_product()
-			print(
-				"inside create_items_if_not_exist in items not synced  {prdocuct}",
-				product,
-			)
 
 
 def get_item_code(shopify_item):
@@ -648,13 +635,11 @@ def delete_from_shopify(product_id: str | None = None, variant_id: str | None = 
 
 	try:
 		raw = GraphQL().execute(mutation, variables)
-		print(raw)
 	except Exception:
 		frappe.log_error(
 			f"Shopify GraphQL execution failed:\n{frappe.get_traceback()}",
 			"Shopify GraphQL Error",
 		)
-		print("Error Occured in Shopify GraphQL execution")
 		raise
 
 	if isinstance(raw, str):
@@ -671,7 +656,6 @@ def delete_from_shopify(product_id: str | None = None, variant_id: str | None = 
 		raise Exception(f"Shopify GraphQL errors: {data['errors']}")
 
 	result = data.get("data", {}).get("productDelete")
-	print(result)
 	if not result:
 		frappe.log_error(json.dumps(data, indent=2), "Shopify Delete Unexpected Response")
 		raise Exception("Unexpected response from Shopify during delete.")
@@ -806,8 +790,6 @@ def shopify_graphql_product_mutation(action: str, product_data: dict) -> dict:
 	user_errors = result.get("userErrors")
 
 	if user_errors:
-		print("Shopify GraphQL User Errors:")
-		print(json.dumps(user_errors, indent=2))
 		frappe.log_error(json.dumps(data, indent=2), f"Shopify GraphQL {action.title()} Raw Response")
 		frappe.throw(f"Shopify {action.title()} Error: {user_errors}")
 
@@ -862,7 +844,6 @@ def shopify_graphql_product_mutation(action: str, product_data: dict) -> dict:
 				"inventory_levels": inventory_levels,
 			}
 		)
-	print("Normalized Product Data:", json.dumps(normalized, indent=2))
 	return normalized
 
 
@@ -939,7 +920,6 @@ def upload_erpnext_item(doc, method=None):
 		write_upload_log(status=is_successful, product=product, item=item)
 
 	elif setting.update_shopify_item_on_update:
-		print("Product is updated here")
 		product_data = map_erpnext_item_to_shopify(erpnext_item=template_item)
 		product_data["id"] = f"gid://shopify/Product/{product_id}"
 
@@ -1006,7 +986,6 @@ def map_erpnext_variant_to_shopify_variant(shopify_product, erpnext_item, varian
 	location_id = get_shopify_location_id(default_warehouse)
 
 	shopify_variants = getattr(shopify_product, "variants", None) or shopify_product.get("variants", [])
-	print("Shopify Variant", shopify_variants)
 
 	if not shopify_variants:
 		msgprint("No variants found in Shopify product")
@@ -1018,13 +997,9 @@ def map_erpnext_variant_to_shopify_variant(shopify_product, erpnext_item, varian
 
 	for v in shopify_variants:
 		sku = v.get("sku") if isinstance(v, dict) else v.sku
-		print(sku)
 		if sku == target_sku:
-			print(sku == target_sku)
 			target_variant_id = v.get("id") if isinstance(v, dict) else v.id
-			print("target_variant_id", target_variant_id)
 			inventory_item_id = v.get("inventory_item_id") if isinstance(v, dict) else v.inventory_item_id
-			print(inventory_item_id)
 
 	if not target_variant_id:
 		msgprint("Could not find variant in Shopify for SKU: " + target_sku)
@@ -1044,7 +1019,6 @@ def map_erpnext_variant_to_shopify_variant(shopify_product, erpnext_item, varian
 			}
 		}
 		"""
-	print(shopify_product.get("id"))
 	price_variables = {
 		"productId": f"gid://shopify/Product/{shopify_product.get('id')}",
 		"variants": [
@@ -1058,7 +1032,6 @@ def map_erpnext_variant_to_shopify_variant(shopify_product, erpnext_item, varian
 	price_response = graphql.execute(price_mutation, price_variables)
 	if isinstance(price_response, str):
 		price_response = json.loads(price_response)
-		print("Price Updation ", price_response)
 
 	if "errors" in price_response:
 		frappe.log_error(json.dumps(price_response["errors"], indent=2), "Shopify Price Update Error")
@@ -1102,18 +1075,13 @@ def map_erpnext_variant_to_shopify_variant(shopify_product, erpnext_item, varian
 		}
 
 		stock_response = graphql.execute(stock_mutation, stock_variables)
-		print("Stock Response", stock_response)
 
 		if isinstance(stock_response, str):
 			stock_response = json.loads(stock_response)
-			print("Stock Updation", stock_response)
-
 			stock_response = graphql.execute(stock_mutation, stock_variables)
-			print("Stock Response", stock_response)
 
 			if isinstance(stock_response, str):
 				stock_response = json.loads(stock_response)
-				print("Stock Updation", stock_response)
 
 			if "errors" in stock_response:
 				frappe.log_error(json.dumps(stock_response["errors"], indent=2), "Shopify Stock Update Error")
@@ -1159,7 +1127,6 @@ def map_erpnext_item_to_shopify(erpnext_item, shopify_product=None):
 	"""Map ERPNext Item fields to Shopify GraphQL `productSet` mutation input structure."""
 
 	# ---- Base Product Info ----
-	print("Map ERPNext to shopify")
 	product_data = {
 		"title": erpnext_item.item_name,
 		"descriptionHtml": f"<p>{erpnext_item.description or erpnext_item.item_name}</p>",
@@ -1218,12 +1185,10 @@ def map_erpnext_item_to_shopify(erpnext_item, shopify_product=None):
 		]
 
 	product_data["productOptions"] = product_options
-	print("Product Data with options", product_data)
 	# ---- Generate Variants ----
 	variants = []
 
 	if has_variants and attribute_values_map:
-		print("Has Variant in map erpnext item to shopify")
 		import itertools
 
 		attribute_names = list(attribute_values_map.keys())
@@ -1252,7 +1217,6 @@ def map_erpnext_item_to_shopify(erpnext_item, shopify_product=None):
 			default_warehouse = frappe.db.get_single_value("Shopify Setting", "warehouse")
 			shopify_location_id = get_shopify_location_id(default_warehouse)
 			if shopify_location_id and cint(erpnext_item.opening_stock or 0) > 0:
-				print("Inventory Quantities")
 				variant["inventoryQuantities"] = [
 					{
 						"locationId": f"gid://shopify/Location/{shopify_location_id}",
@@ -1300,7 +1264,6 @@ def map_erpnext_item_to_shopify(erpnext_item, shopify_product=None):
 			if isinstance(shopify_product, dict)
 			else getattr(shopify_product, "id", None)
 		)
-		print("Final Product Data ", product_data)
 
 	return product_data
 
@@ -1311,7 +1274,6 @@ def get_shopify_location_id(erpnext_warehouse: str | None = None) -> str | None:
 	If `erpnext_warehouse` is provided, map it using the child table.
 	Otherwise, return the first available location.
 	"""
-	print("Shopify Location ID")
 	try:
 		shopify_setting = frappe.get_single("Shopify Setting")
 		mappings = shopify_setting.get("shopify_warehouse_mapping") or []

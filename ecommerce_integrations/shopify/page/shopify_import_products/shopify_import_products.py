@@ -29,7 +29,6 @@ os.makedirs(TEMP_DIR, exist_ok=True)
 @frappe.whitelist()
 def get_shopify_products(cursor=None, direction="next"):
 	shopify_products = fetch_all_products(cursor=cursor, direction=direction)
-	print(f"cursor={cursor}, direction={direction}")
 	return shopify_products
 
 
@@ -357,9 +356,10 @@ def start_bulk_product_job():
     }
     """
 	response = json.loads(GraphQL().execute(query))
-	print("BulkOperation response:", response)
 	if response.get("data", {}).get("bulkOperationRunQuery", {}).get("userErrors"):
-		print("User Errors:", response["data"]["bulkOperationRunQuery"]["userErrors"])
+		frappe.throw(
+			"Error while executing bulkOperation:", response["data"]["bulkOperationRunQuery"]["userErrors"]
+		)
 	return response
 
 
@@ -380,7 +380,6 @@ def check_bulk_status():
     }
     """
 	response = json.loads(GraphQL().execute(query))
-	print("CurrentBulkOperation response:", response)
 	return response.get("data", {}).get("currentBulkOperation")
 
 
@@ -393,7 +392,6 @@ def monitor_bulk_job(**kwargs):
 
 	while attempt < max_attempts:
 		info = check_bulk_status()
-		job = get_current_job()
 		if not info:
 			publish("⚠️ No active bulk operation found.", error=True)
 			create_shopify_log(
@@ -408,7 +406,6 @@ def monitor_bulk_job(**kwargs):
 
 		if status == "COMPLETED":
 			publish(f"✅ Bulk job completed! Processing {count} products...")
-			print(f"Bulk job completed! Processing {count} products...")
 			bulk_id = info.get("id")
 			url = info.get("url")
 			local_file = download_bulk_file(url, bulk_id)
@@ -421,11 +418,6 @@ def monitor_bulk_job(**kwargs):
 				message="Bulk sync completed",
 				method="monitor_bulk_job",
 			)
-
-			print("Deleting job:", job)
-			if job:
-				is_job_deleted = job.delete()
-				print("Job deleted:", is_job_deleted)
 
 			# Clean up local file
 			if os.path.exists(local_file):
@@ -569,18 +561,15 @@ def process_batch(batch, bulk_id=None):
 			synced_count += 1
 
 			last_synced_id = product_id
-			print(f"Synced product {product_id}")
 			frappe.db.commit()
 
 		except Exception as e:
 			failed_count += 1
-			print(f"Failed to sync product {product_id}: {e}")
 			frappe.log_error(
 				message=f"Product {product_id} sync failed: {e}",
 				title="Shopify Bulk Sync Error",
 			)
-	print(f"Batch completed. Synced: {synced_count}, Failed: {failed_count}")
-	print(f"Last synced product ID in batch: {last_synced_id} and bulk_id: {bulk_id}")
+
 	# Commit DB and update checkpoint after each batch
 	if all([bulk_id, last_synced_id]):
 		frappe.db.set_value(
@@ -637,11 +626,9 @@ def queue_sync_all_products(*args, **kwargs):
 				continue
 
 		frappe.db.commit()
-		print(f"Committed changes for products {products}")
 
 		has_next_page = page_info.get("hasNextPage", False)
 		cursor = page_info.get("endCursor") if has_next_page else None
-		print(f"Committed changes for products {products} , moving to next page: {cursor}")
 
 	end_time = process_time()
 	publish(f"🎉 Done in {end_time - start_time:.2f}s", done=True)
