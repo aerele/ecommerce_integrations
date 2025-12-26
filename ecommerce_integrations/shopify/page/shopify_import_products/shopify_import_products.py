@@ -7,6 +7,7 @@ from unittest import result
 
 import frappe
 import requests
+from frappe import _
 from frappe.exceptions import UniqueValidationError
 from rq import get_current_job
 from shopify import GraphQL
@@ -358,7 +359,7 @@ def start_bulk_product_job():
 	response = json.loads(GraphQL().execute(query))
 	if response.get("data", {}).get("bulkOperationRunQuery", {}).get("userErrors"):
 		frappe.throw(
-			"Error while executing bulkOperation:", response["data"]["bulkOperationRunQuery"]["userErrors"]
+			_("Error while executing bulkOperation:", response["data"]["bulkOperationRunQuery"]["userErrors"])
 		)
 	return response
 
@@ -559,9 +560,7 @@ def process_batch(batch, bulk_id=None):
 			shopify_product = ShopifyProduct(product_id)
 			shopify_product.sync_product()
 			synced_count += 1
-
 			last_synced_id = product_id
-			frappe.db.commit()
 
 		except Exception as e:
 			failed_count += 1
@@ -570,7 +569,6 @@ def process_batch(batch, bulk_id=None):
 				title="Shopify Bulk Sync Error",
 			)
 
-	# Commit DB and update checkpoint after each batch
 	if all([bulk_id, last_synced_id]):
 		frappe.db.set_value(
 			"Shopify Bulk Sync Progress",
@@ -578,6 +576,7 @@ def process_batch(batch, bulk_id=None):
 			"last_synced_product_id",
 			last_synced_id,
 		)
+		# Commit DB and update checkpoint after each batch
 		frappe.db.commit()
 
 	return synced_count, failed_count, last_synced_id
@@ -625,6 +624,8 @@ def queue_sync_all_products(*args, **kwargs):
 				frappe.db.rollback(save_point=savepoint)
 				continue
 
+		# Commit after processing each Shopify page to persist progress
+		# before fetching the next page
 		frappe.db.commit()
 
 		has_next_page = page_info.get("hasNextPage", False)

@@ -464,12 +464,11 @@ class ShopifyProduct:
 				json.dumps(data["errors"], indent=2),
 				"Shopify GraphQL Product Fetch Error",
 			)
-			frappe.throw("Failed to fetch product details from Shopify GraphQL")
 
 		product = data.get("data", {}).get("product", {})
 
 		if not product:
-			frappe.throw("No product data found in Shopify GraphQL response , Product may be deleted")
+			frappe.throw(_("No product data found in Shopify GraphQL response , Product may be deleted"))
 
 		normalized = {
 			"id": product.get("id").split("/")[-1],
@@ -784,18 +783,16 @@ def shopify_graphql_product_mutation(action: str, product_data: dict) -> dict:
 			json.dumps(data["errors"], indent=2),
 			f"Shopify GraphQL Product {action.title()} Error",
 		)
-		frappe.throw(f"Failed to {action} product in Shopify GraphQL")
 
 	result = data.get("data", {}).get("productSet", {})
 	user_errors = result.get("userErrors")
 
 	if user_errors:
 		frappe.log_error(json.dumps(data, indent=2), f"Shopify GraphQL {action.title()} Raw Response")
-		frappe.throw(f"Shopify {action.title()} Error: {user_errors}")
 
 	product = result.get("product", {})
 	if not product:
-		frappe.throw(f"No product returned from Shopify after {action}")
+		frappe.throw(_(f"No product returned from Shopify after {action}"))
 
 	normalized = {
 		"id": product.get("id").split("/")[-1] if product.get("id") else None,
@@ -863,11 +860,11 @@ def upload_erpnext_item(doc, method=None):
 
 	# In GraphQL flow, allow templates (has_variants=1) so variants can be generated
 	if len(item.attributes) > 3:
-		msgprint(_("Template items/Items with 4 or more attributes can not be uploaded to Shopify."))
+		frappe.msgprint(_("Template items/Items with 4 or more attributes can not be uploaded to Shopify."))
 		return
 
 	if item.variant_of and not setting.upload_variants_as_items:
-		msgprint(_("Enable variant sync in setting to upload item to Shopify."))
+		frappe.msgprint(_("Enable variant sync in setting to upload item to Shopify."))
 		return
 
 	if item.variant_of:
@@ -988,7 +985,7 @@ def map_erpnext_variant_to_shopify_variant(shopify_product, erpnext_item, varian
 	shopify_variants = getattr(shopify_product, "variants", None) or shopify_product.get("variants", [])
 
 	if not shopify_variants:
-		msgprint("No variants found in Shopify product")
+		frappe.msgprint(_("No variants found in Shopify product"))
 		return None
 
 	target_sku = variant_attributes.get("sku")
@@ -1002,7 +999,10 @@ def map_erpnext_variant_to_shopify_variant(shopify_product, erpnext_item, varian
 			inventory_item_id = v.get("inventory_item_id") if isinstance(v, dict) else v.inventory_item_id
 
 	if not target_variant_id:
-		msgprint("Could not find variant in Shopify for SKU: " + target_sku)
+		frappe.log_error(
+			message=f"Could not find variant in Shopify for SKU: {target_sku}",
+			title="Shopify Variant Not Found",
+		)
 		return None
 
 	price_mutation = """

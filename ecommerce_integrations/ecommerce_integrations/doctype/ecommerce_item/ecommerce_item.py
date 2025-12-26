@@ -33,7 +33,6 @@ class EcommerceItem(Document):
 		frappe.logger().info(
 			f"[EcommerceItem:on_trash] Triggered for {self.name} | Integration: {self.integration}"
 		)
-		print(f"[EcommerceItem:on_trash] Triggered for {self.name} | Integration: {self.integration}")
 
 		sales_order = frappe.db.exists("Sales Order Item", {"item_code": self.erpnext_item_code})
 		sales_invoice = frappe.db.exists("Sales Invoice Item", {"item_code": self.erpnext_item_code})
@@ -64,7 +63,7 @@ class EcommerceItem(Document):
 					f"[Shopify] Skipped — no integration or integration_item_code for {self.name}"
 				)
 		else:
-			frappe.throw("Item Cannot be Deleted — linked with Sales Order or Invoice.")
+			frappe.throw(_("Item Cannot be Deleted — linked with Sales Order or Invoice."))
 
 	def check_unique_constraints(self) -> None:
 		filters = []

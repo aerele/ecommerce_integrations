@@ -762,7 +762,6 @@ def _fetch_old_orders(from_time, to_time, limit=50):
 
 		if "errors" in response:
 			frappe.log_error(json.dumps(response["errors"], indent=2), "Shopify Order Fetch Error")
-			frappe.throw("Error fetching orders from Shopify. Check error log for details.")
 			break
 
 		orders_data = response.get("data", {}).get("orders", {})

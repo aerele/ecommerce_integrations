@@ -165,6 +165,8 @@ def upload_inventory_data_to_shopify(inventory_levels, warehous_map) -> None:
 				d.status = "Failed"
 				d.failure_reason = str(e)
 
+			# Commit is required here to persist each inventory update independently
+			# during bulk Shopify sync to prevent data loss on partial failures
 			frappe.db.commit()
 
 		_log_inventory_update_status(inventory_sync_batch)
