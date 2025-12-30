@@ -245,8 +245,6 @@ def process_request(data, event):
 def _validate_request(req, hmac_header):
 	settings = frappe.get_doc(SETTING_DOCTYPE)
 	secret_key = settings.shared_secret
-	# add secret to webhook from shopify custom app webhook
-
 	raw_body = req.get_data()
 
 	computed_hmac = base64.b64encode(

@@ -9,6 +9,7 @@ from ecommerce_integrations.shopify.constants import (
 	ORDER_ID_FIELD,
 	ORDER_NUMBER_FIELD,
 	SETTING_DOCTYPE,
+	SHOPIFY_LINE_ITEM_ID_FIELD,
 )
 from ecommerce_integrations.shopify.order import get_sales_order
 from ecommerce_integrations.shopify.utils import create_shopify_log
@@ -84,6 +85,11 @@ def get_fulfillment_items(dn_items, fulfillment_items, location_id=None):
 		if shopify_item := find_matching_fullfilement_item(dn_item):
 			dn_item.qty = shopify_item.get("quantity")
 			dn_item.warehouse = warehouse
+			setattr(
+				dn_item,
+				SHOPIFY_LINE_ITEM_ID_FIELD,
+				str(shopify_item.get("id")),
+			)
 			final_items.append(dn_item)
 
 	return final_items

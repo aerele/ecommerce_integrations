@@ -16,6 +16,7 @@ from ecommerce_integrations.shopify.constants import (
 	ORDER_NUMBER_FIELD,
 	ORDER_STATUS_FIELD,
 	SETTING_DOCTYPE,
+	SHOPIFY_LINE_ITEM_ID_FIELD
 )
 from ecommerce_integrations.shopify.customer import ShopifyCustomer
 from ecommerce_integrations.shopify.product import (
@@ -97,7 +98,7 @@ def create_sales_order(shopify_order, setting, company=None):
 				"Following items exists in the shopify order but relevant records were"
 				" not found in the shopify Product master"
 			)
-			product_not_exists = []  # TODO: fix missing items
+			product_not_exists = []  #fix missing items
 			message += "\n" + ", ".join(product_not_exists)
 
 			create_shopify_log(status="Error", exception=message, rollback=True)
@@ -170,6 +171,7 @@ def get_order_items(order_items, setting, delivery_date, taxes_inclusive):
 					ORDER_ITEM_DISCOUNT_FIELD: (
 						_get_total_discount(shopify_item) / cint(shopify_item.get("quantity"))
 					),
+					SHOPIFY_LINE_ITEM_ID_FIELD:str(shopify_item.get("id")),
 				}
 			)
 		else:

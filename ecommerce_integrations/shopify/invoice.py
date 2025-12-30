@@ -1,6 +1,7 @@
 import frappe
 from erpnext.selling.doctype.sales_order.sales_order import make_sales_invoice
 from frappe.utils import cint, cstr, getdate, nowdate
+from frappe import _
 
 from ecommerce_integrations.shopify.constants import (
 	ORDER_ID_FIELD,
@@ -24,15 +25,17 @@ def prepare_sales_invoice(payload, request_id=None):
 		if sales_order:
 			create_sales_invoice(order, setting, sales_order)
 			create_shopify_log(status="Success")
-		if not sales_order:
-			sales_order = create_sales_order(order, setting)
-			create_sales_invoice(order, setting, sales_order)
-			create_shopify_log(status="Success")
 		else:
-			create_shopify_log(
-				status="Invalid",
-				message="Sales Order not found for syncing sales invoice.",
-			)
+			sales_order = create_sales_order(order, setting)
+			if sales_order:
+				create_sales_invoice(order, setting, sales_order)
+				create_shopify_log(status="Success")
+			else:
+				create_shopify_log(
+					status="Invalid",
+					message="Sales Order could not be created for syncing sales invoice."
+				)
+
 	except Exception as e:
 		create_shopify_log(status="Error", exception=e, rollback=True)
 
@@ -54,7 +57,12 @@ def create_sales_invoice(shopify_order, setting, so):
 		sales_invoice.due_date = posting_date
 		sales_invoice.naming_series = setting.sales_invoice_series or "SI-Shopify-"
 		sales_invoice.flags.ignore_mandatory = True
-		set_cost_center(sales_invoice.items, setting.cost_center)
+		set_cost_center(
+            sales_invoice.items,
+            setting.cost_center,
+            sales_invoice.company,
+            setting,
+        )
 		sales_invoice.insert(ignore_mandatory=True)
 		sales_invoice.submit()
 		if sales_invoice.grand_total > 0:
@@ -64,22 +72,35 @@ def create_sales_invoice(shopify_order, setting, so):
 			sales_invoice.add_comment(text=f"Order Note: {shopify_order.get('note')}")
 
 
-def set_cost_center(items, cost_center, company=None):
-	"""Set cost center and ensure each item has an income account."""
+def set_cost_center(items, cost_center, company, setting=None):
 	for item in items:
+		# Cost Center
 		if cost_center and not item.cost_center:
 			item.cost_center = cost_center
-
-		if not item.income_account and company:
+        # Income Account resolution
+		if not item.income_account:
+           
 			item.income_account = frappe.db.get_value(
-				"Item Default",
-				{"parent": item.item_code, "company": company},
-				"income_account",
-			)
+                "Item Default",
+                {
+                    "parent": item.item_code,
+                    "company": company,
+                },
+                "income_account",
+            )
 
-			if not item.income_account:
-				item.income_account = frappe.get_cached_value("Company", company, "default_income_account")
+		if not item.income_account:
+			item.income_account = frappe.db.get_value(
+                "Item Group",
+                item.item_group,
+                "default_income_account",
+            )
 
+
+		if not item.income_account:
+			frappe.throw(_(
+                f"Income Account not found for Item {item.item_code}"
+            ))
 
 def make_payament_entry_against_sales_invoice(doc, setting, posting_date=None):
 	from erpnext.accounts.doctype.payment_entry.payment_entry import get_payment_entry
